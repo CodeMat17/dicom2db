@@ -1,6 +1,11 @@
+import { AppSidebar } from "@/components/app-sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { ConvexClientProvider } from "./ConvexClientProvider";
+import { Toaster } from "sonner";
+
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -24,11 +29,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang='en' suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <ConvexClientProvider>
+          <SidebarProvider>
+            <AppSidebar />
+            <main className='w-full'>
+              <SidebarTrigger />
+              {children}
+            </main>
+            <Toaster />
+          </SidebarProvider>
+        </ConvexClientProvider>
       </body>
     </html>
   );

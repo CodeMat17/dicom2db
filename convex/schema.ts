@@ -39,6 +39,7 @@ export default defineSchema({
     slug: v.string(),
     story: v.optional(v.string()),
     photo: v.id("_storage"),
+    publishedAt: v.optional(v.number()),
   }).index("by_slug", ["slug"]),
 
   achievementsStats: defineTable({

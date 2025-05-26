@@ -27,7 +27,7 @@ const OurStaff = () => {
         </Button>
       </div>
 
-      <div className='flex flex-col md:flex-row justify-between gap-6'>
+      <div className='flex flex-col md:flex-row md:items-center justify-between gap-6'>
         <div className='w-full md:max-w-[35%]'>
           {director?.imageUrl && (
             <div className='flex flex-col justify-center items-center bg-white dark:bg-gray-700 rounded-xl shadow-md pt-4 px-6'>
@@ -62,7 +62,7 @@ const OurStaff = () => {
             </div>
           )}
         </div>
-        <div className='w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2'>
+        <div className='w-full grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2'>
           {staff.map((member) => (
             <div
               key={member._id}

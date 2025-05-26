@@ -24,8 +24,8 @@ const items = [
     icon: Inbox,
   },
   {
-    title: "Achievements",
-    url: "/achievements",
+    title: "Our Stories",
+    url: "/our-stories",
     icon: Calendar,
   },
   {

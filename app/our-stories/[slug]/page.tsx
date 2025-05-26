@@ -14,6 +14,7 @@ import Image from "next/image";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import dayjs from 'dayjs'
 
 export default function AchievementPage() {
   const router = useRouter();
@@ -229,7 +230,7 @@ export default function AchievementPage() {
             {storyData._creationTime && (
               <footer className='mb-6 text-sm text-muted-foreground italic'>
                 Published{" "}
-                {new Date(storyData._creationTime).toLocaleDateString()}
+                {dayjs(storyData.publishedAt).format('MMM DD, YYYY')}
               </footer>
             )}
           </>

@@ -98,6 +98,7 @@ const AddStory = () => {
         story,
         slug,
         photo: storageId,
+        publishedAt: Date.now()
       });
 
       toast.success("Success!", { description: "Story created successfully" });

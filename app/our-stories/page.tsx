@@ -19,7 +19,7 @@ const AchievementsPage = () => {
             Our Stories
           </h2>
           <Button asChild>
-            <Link href='/achievements/add-story'>Add Story</Link>
+            <Link href='/our-stories/add-story'>Add Story</Link>
           </Button>
         </div>
 
@@ -79,7 +79,7 @@ const AchievementsPage = () => {
                     title={achievement.title}
                   />
                   <Button asChild variant='outline' className='w-full'>
-                    <Link href={`/achievements/${achievement.slug}`}>
+                    <Link href={`/our-stories/${achievement.slug}`}>
                       Update
                     </Link>
                   </Button>

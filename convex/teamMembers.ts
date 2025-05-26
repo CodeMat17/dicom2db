@@ -49,7 +49,7 @@ export const addStaff = mutation({
   args: {
     name: v.string(),
     position: v.string(),
-    email: v.string(),
+    email: v.optional(v.string()),
     image: v.id("_storage"),
     profile: v.string(), // Now accepts text content
   },

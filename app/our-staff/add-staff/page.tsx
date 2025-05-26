@@ -48,7 +48,7 @@ export default function AddStaff() {
   };
 
   const handleSubmit = async () => {
-    if (!name || !position || !email || !profile || !image) {
+    if (!name || !position || !profile || !image) {
       toast.error("All fields are required");
       return;
     }
@@ -112,7 +112,7 @@ export default function AddStaff() {
         </div>
 
         <div>
-          <label className='text-sm text-muted-foreground'>Email</label>
+          <label className='text-sm text-muted-foreground'>Email (optional)</label>
           <Input
             type='email'
             id='email'

@@ -18,6 +18,7 @@ export default function AddStaff() {
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  
   const addStaff = useMutation(api.teamMembers.addStaff);
   const router = useRouter();
 
@@ -110,7 +111,7 @@ export default function AddStaff() {
             onChange={(e) => setPosition(e.target.value)}
           />
         </div>
-
+{/* {role === 'director'} */}
         <div>
           <label className='text-sm text-muted-foreground'>Email (optional)</label>
           <Input

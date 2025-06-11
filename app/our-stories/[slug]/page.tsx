@@ -4,17 +4,17 @@
 
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useMutation, useQuery } from "convex/react";
-import { ImagePlus, Loader2, Lock, LockOpen, X } from "lucide-react";
+import dayjs from "dayjs";
+import { ImagePlus, Loader2, X } from "lucide-react";
 import Image from "next/image";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import dayjs from 'dayjs'
 
 export default function AchievementPage() {
   const router = useRouter();
@@ -34,13 +34,10 @@ export default function AchievementPage() {
     }
   }, [storyData, router]);
 
- 
-
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
   const updateAchievement = useMutation(api.achievements.updateAchievement);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [isLocked, setIsLocked] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -75,11 +72,11 @@ export default function AchievementPage() {
 
   // Generate slug from title when locked
   useEffect(() => {
-    if (isLocked && storyData?.title) {
+    if (storyData?.title) {
       const newSlug = generateSlug(title);
       setSlug(newSlug);
     }
-  }, [title, isLocked, storyData]);
+  }, [title, storyData]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -133,7 +130,7 @@ export default function AchievementPage() {
       setIsEditing(false);
       // Redirect to new slug if it changed
       if (slug !== slugParam) {
-        router.back()
+        router.back();
       } else {
         router.refresh();
       }
@@ -167,18 +164,7 @@ export default function AchievementPage() {
 
   return (
     <article className='max-w-3xl mx-auto px-4 py-12'>
-      <div className='flex justify-between items-center gap-4 mb-8'>
-        <h1 className='text-4xl font-bold'>
-          {isEditing ? (
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className='text-4xl font-bold'
-            />
-          ) : (
-            storyData.title
-          )}
-        </h1>
+      <div className='flex flex-col sm:flex-row-reverse  justify-between items-center gap-4 mb-8'>
         <div className='flex gap-2'>
           {isEditing ? (
             <>
@@ -197,26 +183,29 @@ export default function AchievementPage() {
             <Button onClick={() => setIsEditing(true)}>Edit</Button>
           )}
         </div>
+        <div className="space-y-1 w-full">
+          <label className='text-muted-foreground text-sm'>Title</label>
+           <h1 className='text-4xl font-bold'>
+          {isEditing ? (
+            <Textarea rows={4}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className='text-4xl font-bold'
+            />
+          ) : (
+            storyData.title
+          )}
+        </h1>
+        </div>
+       
       </div>
 
       <div className='mb-8'>
         {isEditing ? (
-          <div className='space-y-4'>
-            <div className='flex items-center gap-2'>
-              <Input
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                className='flex-1'
-              />
-              <Button
-                variant='outline'
-                size='icon'
-                onClick={() => setIsLocked(!isLocked)}>
-                {isLocked ? <Lock size={16} /> : <LockOpen size={16} />}
-              </Button>
-            </div>
-
-            <Input
+          <div className='space-y-1'>
+            <label className='text-muted-foreground text-sm'>Description</label>
+            <Textarea
+              rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder='Enter description'
@@ -229,8 +218,7 @@ export default function AchievementPage() {
             </p>
             {storyData._creationTime && (
               <footer className='mb-6 text-sm text-muted-foreground italic'>
-                Published{" "}
-                {dayjs(storyData.publishedAt).format('MMM DD, YYYY')}
+                Published {dayjs(storyData.publishedAt).format("MMM DD, YYYY")}
               </footer>
             )}
           </>

@@ -6,11 +6,18 @@ import ListItem from "@tiptap/extension-list-item";
 import OrderedList from "@tiptap/extension-ordered-list";
 import Paragraph from "@tiptap/extension-paragraph";
 import Text from "@tiptap/extension-text";
+import Image from "@tiptap/extension-image";
 import { Editor, EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { Bold, Italic, List, ListOrdered } from "lucide-react";
+import {
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+  Image as ImageIcon,
+} from "lucide-react";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface RichTextEditorProps {
   value: string;
@@ -19,6 +26,7 @@ interface RichTextEditorProps {
 
 function RichTextEditorComponent({ value, onChange }: RichTextEditorProps) {
   const [mounted, setMounted] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
     extensions: [
@@ -26,26 +34,26 @@ function RichTextEditorComponent({ value, onChange }: RichTextEditorProps) {
       Paragraph,
       Text,
       StarterKit.configure({
-        // Disable default extensions we're replacing
         bulletList: false,
         orderedList: false,
         listItem: false,
       }),
-      BulletList.extend({
-        name: "customBulletList", // Unique name
-      }).configure({
+      BulletList.extend({ name: "customBulletList" }).configure({
         HTMLAttributes: {
           class: "list-disc ml-4",
         },
       }),
-      OrderedList.extend({
-        name: "customOrderedList", // Unique name
-      }).configure({
+      OrderedList.extend({ name: "customOrderedList" }).configure({
         HTMLAttributes: {
           class: "list-decimal ml-4",
         },
       }),
       ListItem.configure({ HTMLAttributes: { class: "ml-4" } }),
+      Image.configure({
+        HTMLAttributes: {
+          class: "w-full h-auto max-h-[500px] object-contain rounded-md border",
+        },
+      }),
     ],
     content: value || "<p>Start typing here...</p>",
     editorProps: {
@@ -57,13 +65,11 @@ function RichTextEditorComponent({ value, onChange }: RichTextEditorProps) {
       preserveWhitespace: "full",
     },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
-    // Explicitly disable immediate rendering
     autofocus: false,
     enableInputRules: false,
     enablePasteRules: false,
   });
 
-  // Client-side mounting
   useEffect(() => {
     setMounted(true);
     return () => {
@@ -71,7 +77,6 @@ function RichTextEditorComponent({ value, onChange }: RichTextEditorProps) {
     };
   }, [editor]);
 
-  // Sync external value changes with the editor
   useEffect(() => {
     if (mounted && editor && value !== editor.getHTML()) {
       editor.commands.setContent(value);
@@ -85,9 +90,20 @@ function RichTextEditorComponent({ value, onChange }: RichTextEditorProps) {
       </div>
     );
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const src = reader.result as string;
+        editor.chain().focus().setImage({ src }).run();
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className='w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm'>
-      {/* Toolbar */}
       <div className='flex gap-2 p-2 border-b border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 rounded-t-md'>
         <ToolbarButton
           editor={editor}
@@ -113,9 +129,21 @@ function RichTextEditorComponent({ value, onChange }: RichTextEditorProps) {
           icon={ListOrdered}
           active='orderedList'
         />
+        <button
+          type='button'
+          className='p-2 rounded-md transition hover:bg-gray-200 dark:hover:bg-gray-700'
+          onClick={() => fileInputRef.current?.click()}>
+          <ImageIcon size={20} className='text-gray-700 dark:text-gray-300' />
+        </button>
+        <input
+          type='file'
+          accept='image/*'
+          ref={fileInputRef}
+          className='hidden'
+          onChange={handleImageUpload}
+        />
       </div>
 
-      {/* Editor Content */}
       <div className='px-2 py-3'>
         <EditorContent editor={editor} />
       </div>
@@ -154,7 +182,6 @@ function ToolbarButton({
   );
 }
 
-// Export with SSR disabled
 export const RichTextEditor = dynamic(
   () => Promise.resolve(RichTextEditorComponent),
   {

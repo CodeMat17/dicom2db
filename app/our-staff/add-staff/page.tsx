@@ -88,7 +88,7 @@ export default function AddStaff() {
 
   return (
     <div className='max-w-lg mx-auto px-4 py-12 space-y-6'>
-      <div className='flex flex-col sm:flex-row gap-3 items-center sm: justify-between'>
+      <div className='flex flex-col sm:flex-row gap-3 items-center sm:justify-between'>
         <h1 className='text-2xl font-semibold'>Add New Staff Member</h1>
         <Button onClick={() => router.back()}>Go Back</Button>
       </div>
@@ -146,8 +146,8 @@ export default function AddStaff() {
               <Image
                 src={imagePreview}
                 alt='Preview'
-                layout='fill'
-                objectFit='cover'
+                fill
+                className='object-cover'
               />
             </div>
           )}

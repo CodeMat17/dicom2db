@@ -35,7 +35,7 @@ const items = [
   },
   {
     title: "Our Staff",
-    url: "our-staff",
+    url: "/our-staff",
     icon: User,
   },
   {

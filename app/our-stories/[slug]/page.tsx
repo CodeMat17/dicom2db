@@ -30,7 +30,7 @@ export default function AchievementPage() {
   useEffect(() => {
     if (storyData === null) {
       toast.error("Achievement not found");
-      router.push("/achievements");
+      router.push("/our-stories");
     }
   }, [storyData, router]);
 

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { deleteFromCloudinary } from "@/lib/cloudinary-upload";
 import { useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -34,7 +35,8 @@ const DeleteAchievement = ({ id, title }: Props) => {
 
     setLoading(true);
     try {
-      await deleteAchievement({ id });
+      const { deletedPublicId } = await deleteAchievement({ id });
+      await deleteFromCloudinary(deletedPublicId);
 
       toast.success("Done!", {
         description: "Achievement deleted successfully",

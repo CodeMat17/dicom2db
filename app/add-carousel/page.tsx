@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 import { api } from "@/convex/_generated/api";
 import { useMutation } from "convex/react";
 import { Loader2 } from "lucide-react";
@@ -13,7 +14,6 @@ import { toast } from "sonner";
 
 export default function AddCarousel() {
   const router = useRouter();
-  const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
   const createSlide = useMutation(api.heroSlides.addHeroSlide);
 
   const imageInput = useRef<HTMLInputElement>(null);
@@ -39,31 +39,25 @@ export default function AddCarousel() {
 
     setIsSubmitting(true);
     try {
-      const uploadUrl = await generateUploadUrl();
-
-      const res = await fetch(uploadUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": selectedImage.type,
-        },
-        body: selectedImage,
-      });
-
-      if (!res.ok) throw new Error("Image upload failed");
-
-      const { storageId } = await res.json();
+      const { imageUrl, imagePublicId } = await uploadToCloudinary(
+        selectedImage,
+        "hero"
+      );
 
       await createSlide({
         title: title.trim(),
         subtitle: subtitle.trim(),
-        img: storageId,
+        imageUrl,
+        imagePublicId,
       });
 
       toast.success("Carousel slide added successfully");
       router.back();
     } catch (err) {
       console.error("Add slide error:", err);
-      toast.error("Failed to add carousel slide");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to add carousel slide"
+      );
     } finally {
       setIsSubmitting(false);
     }

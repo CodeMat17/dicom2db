@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import {
+  deleteFromCloudinary,
+  uploadToCloudinary,
+  type UploadedImage,
+} from "@/lib/cloudinary-upload";
 import { useMutation, useQuery } from "convex/react";
 import dayjs from "dayjs";
 import { ImagePlus, Loader2, X } from "lucide-react";
@@ -34,7 +38,6 @@ export default function AchievementPage() {
     }
   }, [storyData, router]);
 
-  const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
   const updateAchievement = useMutation(api.achievements.updateAchievement);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -47,9 +50,8 @@ export default function AchievementPage() {
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
   const [storyContent, setStoryContent] = useState("");
-  const [photoStorageId, setPhotoStorageId] = useState<Id<"_storage"> | null>(
-    null
-  );
+  // Set only when a replacement file has been uploaded this session.
+  const [uploaded, setUploaded] = useState<UploadedImage | null>(null);
 
   // Initialize state from storyData
   useEffect(() => {
@@ -58,7 +60,7 @@ export default function AchievementPage() {
       setSlug(storyData.slug);
       setDescription(storyData.description);
       setStoryContent(storyData.story || "");
-      setPhotoStorageId(storyData.photo);
+      setUploaded(null);
       setPreviewUrl(storyData.photoUrl);
     }
   }, [storyData]);
@@ -82,26 +84,12 @@ export default function AchievementPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 1024 * 1024) {
-      toast.error("Error!", { description: "Image must be less than 1MB" });
-      return;
-    }
-
     try {
       setIsUploading(true);
       const preview = URL.createObjectURL(file);
       setPreviewUrl(preview);
 
-      const uploadUrl = await generateUploadUrl();
-      const response = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-
-      if (!response.ok) throw new Error("Upload failed");
-      const { storageId } = await response.json();
-      setPhotoStorageId(storageId);
+      setUploaded(await uploadToCloudinary(file, "stories"));
     } catch (error) {
       toast.error("Upload failed", { description: `${error}` });
       setPreviewUrl(null);
@@ -113,18 +101,24 @@ export default function AchievementPage() {
   const handleSave = async () => {
     if (!title) return toast.error("Title is required");
     if (!slug) return toast.error("Slug is required");
-    if (!photoStorageId) return toast.error("Photo is required");
+    if (!uploaded && !previewUrl) return toast.error("Photo is required");
 
     setIsSaving(true);
     try {
-      await updateAchievement({
+      const { replacedPublicId } = await updateAchievement({
         id: storyData!._id,
         title,
         description,
         story: storyContent,
         slug,
-        photo: photoStorageId,
+        ...(uploaded && {
+          imageUrl: uploaded.imageUrl,
+          imagePublicId: uploaded.imagePublicId,
+        }),
       });
+
+      // The story no longer points at the previous cover image.
+      await deleteFromCloudinary(replacedPublicId);
 
       toast.success("Achievement updated successfully");
       setIsEditing(false);
@@ -148,7 +142,7 @@ export default function AchievementPage() {
       setSlug(storyData.slug);
       setDescription(storyData.description);
       setStoryContent(storyData.story || "");
-      setPhotoStorageId(storyData.photo);
+      setUploaded(null);
       setPreviewUrl(storyData.photoUrl);
     }
     setIsEditing(false);
@@ -249,7 +243,7 @@ export default function AchievementPage() {
                   className='absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full'
                   onClick={() => {
                     setPreviewUrl(null);
-                    setPhotoStorageId(null);
+                    setUploaded(null);
                   }}>
                   <X size={16} />
                 </button>

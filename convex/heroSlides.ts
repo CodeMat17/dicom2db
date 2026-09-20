@@ -7,7 +7,11 @@ export const getHeroSlides = query({
 
     const slidesWithUrls = await Promise.all(
       slides.map(async (slide) => {
-        const imgUrl = slide.img ? await ctx.storage.getUrl(slide.img) : null;
+        // Cloudinary first; fall back to the legacy Convex file for rows the
+        // migration has not copied across yet.
+        const imgUrl =
+          slide.imageUrl ??
+          (slide.img ? await ctx.storage.getUrl(slide.img) : null);
 
         return {
           _id: slide._id,
@@ -15,6 +19,7 @@ export const getHeroSlides = query({
           subtitle: slide.subtitle,
           alt: slide.title,
           img: slide.img,
+          imagePublicId: slide.imagePublicId,
           imgUrl,
         };
       })
@@ -25,13 +30,15 @@ export const getHeroSlides = query({
 
 export const addHeroSlide = mutation({
   args: {
-    img: v.id("_storage"),
+    imageUrl: v.string(),
+    imagePublicId: v.string(),
     title: v.string(),
     subtitle: v.string(),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("heroSlides", {
-      img: args.img,
+      imageUrl: args.imageUrl,
+      imagePublicId: args.imagePublicId,
       title: args.title,
       subtitle: args.subtitle,
       alt: args.title,
@@ -44,23 +51,40 @@ export const updateHeroSlide = mutation({
     id: v.id("heroSlides"),
     title: v.string(),
     subtitle: v.string(),
-    img: v.optional(v.id("_storage")),
+    imageUrl: v.optional(v.string()),
+    imagePublicId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.id);
     if (!existing) throw new Error("Hero slide not found");
 
-    // Delete old image if a new one is being used and it differs from current
-    if (args.img && args.img !== existing.img) {
-      await ctx.storage.delete(existing.img);
+    const replacing = !!args.imageUrl && args.imageUrl !== existing.imageUrl;
+
+    // A replaced legacy file can go now; the Cloudinary asset is purged by
+    // the caller, which is the only side holding the API secret.
+    if (replacing && existing.img) {
+      await ctx.storage.delete(existing.img).catch((error) => {
+        console.error("Failed to delete legacy hero image:", error);
+      });
     }
 
     await ctx.db.patch(args.id, {
-      title: args.title ?? existing.title,
-      subtitle: args.subtitle ?? existing.subtitle,
-      img: args.img ?? existing.img,
-      alt: args.title ?? existing.title,
+      title: args.title,
+      subtitle: args.subtitle,
+      alt: args.title,
+      ...(replacing
+        ? {
+            imageUrl: args.imageUrl,
+            imagePublicId: args.imagePublicId,
+            img: undefined,
+          }
+        : {}),
     });
+
+    // So the dashboard can purge the asset this row no longer points at.
+    return {
+      replacedPublicId: replacing ? (existing.imagePublicId ?? null) : null,
+    };
   },
 });
 
@@ -69,6 +93,16 @@ export const deleteHeroSlide = mutation({
     id: v.id("heroSlides"),
   },
   handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id);
+    if (!existing) throw new Error("Hero slide not found");
+
+    if (existing.img) {
+      await ctx.storage.delete(existing.img).catch((error) => {
+        console.error("Failed to delete legacy hero image:", error);
+      });
+    }
+
     await ctx.db.delete(args.id);
+    return { deletedPublicId: existing.imagePublicId ?? null };
   },
 });

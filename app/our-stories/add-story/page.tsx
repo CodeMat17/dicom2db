@@ -4,7 +4,10 @@ import { RichTextEditor } from "@/components/RichTextEditor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import {
+  uploadToCloudinary,
+  type UploadedImage,
+} from "@/lib/cloudinary-upload";
 import { useMutation } from "convex/react";
 import { ImagePlus, X } from "lucide-react";
 import Image from "next/image";
@@ -23,14 +26,13 @@ const AddStory = () => {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
   const addStory = useMutation(api.achievements.addStory);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [story, setStory] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [storageId, setStorageId] = useState<Id<"_storage"> | null>(null);
+  const [uploaded, setUploaded] = useState<UploadedImage | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
 
@@ -38,27 +40,12 @@ const AddStory = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 1024 * 1024) {
-      toast.error("Error!", { description: "Image must be less than 1MB" });
-      return;
-    }
-
     try {
       setIsUploading(true);
       const preview = URL.createObjectURL(file);
       setPreviewUrl(preview);
 
-      const uploadUrl = await generateUploadUrl();
-      const response = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-
-      if (!response.ok) throw new Error("Upload failed");
-      const { storageId } = await response.json();
-
-      setStorageId(storageId);
+      setUploaded(await uploadToCloudinary(file, "stories"));
     } catch (error) {
       toast.error("Upload failed", {
         description: error instanceof Error ? error.message : "Unknown error",
@@ -78,14 +65,14 @@ const AddStory = () => {
   const handleRemoveImage = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
-    setStorageId(null);
+    setUploaded(null);
   };
 
   const handlePost = async () => {
     if (!title) return toast.error("Error!", { description: "Enter title" });
     if (!description)
       return toast.error("Error!", { description: "Enter description" });
-    if (!storageId)
+    if (!uploaded)
       return toast.error("Error!", { description: "Please upload a photo" });
 
     const slug = generateSlug(title);
@@ -97,8 +84,9 @@ const AddStory = () => {
         description,
         story,
         slug,
-        photo: storageId,
-        publishedAt: Date.now()
+        imageUrl: uploaded.imageUrl,
+        imagePublicId: uploaded.imagePublicId,
+        publishedAt: Date.now(),
       });
 
       toast.success("Success!", { description: "Story created successfully" });
@@ -119,7 +107,7 @@ const AddStory = () => {
     setDescription("");
     setStory("");
     setPreviewUrl(null);
-    setStorageId(null);
+    setUploaded(null);
   };
 
   return (

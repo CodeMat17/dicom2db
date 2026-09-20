@@ -10,7 +10,15 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Calendar, Handshake, Home, Inbox, User, Users } from "lucide-react";
+import {
+  Calendar,
+  Handshake,
+  Home,
+  Images,
+  Inbox,
+  User,
+  Users,
+} from "lucide-react";
 
 const items = [
   {
@@ -27,6 +35,11 @@ const items = [
     title: "Our Stories",
     url: "/our-stories",
     icon: Calendar,
+  },
+  {
+    title: "Gallery",
+    url: "/gallery",
+    icon: Images,
   },
   {
     title: "Testimonials",

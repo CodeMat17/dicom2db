@@ -17,6 +17,7 @@ import type * as achievements from "../achievements.js";
 import type * as achievementsStat from "../achievementsStat.js";
 import type * as collaborators from "../collaborators.js";
 import type * as events from "../events.js";
+import type * as gallery from "../gallery.js";
 import type * as heroSlides from "../heroSlides.js";
 import type * as statements from "../statements.js";
 import type * as storage from "../storage.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   achievementsStat: typeof achievementsStat;
   collaborators: typeof collaborators;
   events: typeof events;
+  gallery: typeof gallery;
   heroSlides: typeof heroSlides;
   statements: typeof statements;
   storage: typeof storage;

@@ -1,17 +1,8 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
+import { Doc } from "./_generated/dataModel";
 
-export interface Staff {
-  _id: Id<"teamMembers">;
-  name: string;
-  position: string;
-  image: Id<"_storage">; // image is the storageId
-  imageUrl?: string | null; // optional field after resolving
-  email?: string;
-  profile?: string;
-  role: "director" | "staff";
-}
+export type Staff = Doc<"teamMembers">;
 
 export const getTeam = query({
   handler: async (ctx) => {
@@ -27,9 +18,12 @@ export const getTeam = query({
         .collect(),
     ]);
 
+    // Cloudinary first, legacy Convex file as the fallback.
     const resolveImageUrl = async (member: Staff) => ({
       ...member,
-      imageUrl: member.image ? await ctx.storage.getUrl(member.image) : null,
+      imageUrl:
+        member.imageUrl ??
+        (member.image ? await ctx.storage.getUrl(member.image) : null),
     });
 
     const director = directorResult
@@ -50,8 +44,9 @@ export const addStaff = mutation({
     name: v.string(),
     position: v.string(),
     email: v.optional(v.string()),
-    image: v.id("_storage"),
-    profile: v.string(), // Now accepts text content
+    imageUrl: v.string(),
+    imagePublicId: v.string(),
+    profile: v.string(),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("teamMembers", {
@@ -68,7 +63,8 @@ export const updateStaff = mutation({
     position: v.string(),
     email: v.optional(v.string()),
     profile: v.string(),
-    image: v.optional(v.id("_storage")),
+    imageUrl: v.optional(v.string()),
+    imagePublicId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.id);
@@ -76,13 +72,31 @@ export const updateStaff = mutation({
       throw new Error("Staff member not found");
     }
 
+    const replacing = !!args.imageUrl && args.imageUrl !== existing.imageUrl;
+
+    if (replacing && existing.image) {
+      await ctx.storage.delete(existing.image).catch((error) => {
+        console.error("Failed to delete legacy staff photo:", error);
+      });
+    }
+
     await ctx.db.patch(args.id, {
       name: args.name,
       position: args.position,
       email: args.email,
       profile: args.profile,
-      ...(args.image && { image: args.image }),
+      ...(replacing
+        ? {
+            imageUrl: args.imageUrl,
+            imagePublicId: args.imagePublicId,
+            image: undefined,
+          }
+        : {}),
     });
+
+    return {
+      replacedPublicId: replacing ? (existing.imagePublicId ?? null) : null,
+    };
   },
 });
 
@@ -94,6 +108,13 @@ export const deleteStaff = mutation({
       throw new Error("Staff member not found");
     }
 
+    if (existing.image) {
+      await ctx.storage.delete(existing.image).catch((error) => {
+        console.error("Failed to delete legacy staff photo:", error);
+      });
+    }
+
     await ctx.db.delete(args.id);
+    return { deletedPublicId: existing.imagePublicId ?? null };
   },
 });

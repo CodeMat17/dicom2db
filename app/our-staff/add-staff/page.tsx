@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -32,43 +33,26 @@ export default function AddStaff() {
     }
   }, [image]);
 
-  const uploadImage = async (file: File) => {
-    const res = await fetch("/api/storage/upload-url", {
-      method: "POST",
-    });
-
-    const { uploadUrl } = await res.json();
-
-    const uploadRes = await fetch(uploadUrl, {
-      method: "POST",
-      body: file,
-    });
-
-    const { storageId } = await uploadRes.json();
-    return storageId;
-  };
-
   const handleSubmit = async () => {
     if (!name || !position || !profile || !image) {
       toast.error("All fields are required");
       return;
     }
 
-    if (image.size > 512000) {
-      toast.error("Image must be smaller than 500KB");
-      return;
-    }
-
     setLoading(true);
     try {
-      const imageId = await uploadImage(image);
+      const { imageUrl, imagePublicId } = await uploadToCloudinary(
+        image,
+        "staff"
+      );
 
       await addStaff({
         name,
         position,
         email,
         profile,
-        image: imageId,
+        imageUrl,
+        imagePublicId,
       });
 
       toast.success("Staff member added");
@@ -79,7 +63,9 @@ export default function AddStaff() {
       setImage(null);
       router.push("/our-staff");
     } catch (err) {
-        toast.error("Failed to add staff member");
+        toast.error(
+          err instanceof Error ? err.message : "Failed to add staff member"
+        );
         console.log('Error Msg :', err);
     } finally {
       setLoading(false);

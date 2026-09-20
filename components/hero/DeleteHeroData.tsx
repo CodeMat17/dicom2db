@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { deleteFromCloudinary } from "@/lib/cloudinary-upload";
 import { useMutation } from "convex/react";
 import Image from "next/image";
 import { useState } from "react";
@@ -28,7 +29,9 @@ const DeleteHeroData = ({ id, imgUrl }: Props) => {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await deleteHeroSlide({ id });
+      const { deletedPublicId } = await deleteHeroSlide({ id });
+      // Keep the Cloudinary library in step with the database.
+      await deleteFromCloudinary(deletedPublicId);
       toast.success("Success!", { description: "Deleted successfully." });
     } catch (error) {
       toast.error("Failed!", { description: "Failed to delete hero slide." });

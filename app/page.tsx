@@ -15,7 +15,7 @@ type SlideWithUrl = {
   title: string;
   subtitle: string;
   alt: string;
-  img: Id<"_storage">;
+  img?: Id<"_storage">;
   imgUrl?: string | null;
 };
 

@@ -7,9 +7,10 @@ export const getCollaborators = query({
 
     const collaboUrls = await Promise.all(
       collabo.map(async (collab) => {
-        const imgUrl = collab.logo
-          ? await ctx.storage.getUrl(collab.logo)
-          : null;
+        // Cloudinary first, legacy Convex file as the fallback.
+        const imgUrl =
+          collab.imageUrl ??
+          (collab.logo ? await ctx.storage.getUrl(collab.logo) : null);
 
         return {
           ...collab,
@@ -25,16 +26,11 @@ export const createCollaborator = mutation({
   args: {
     name: v.string(),
     office: v.string(),
-    logo: v.id("_storage"),
+    imageUrl: v.string(),
+    imagePublicId: v.string(),
   },
-  handler: async (ctx, { name, office, logo }) => {
-    const collaboratorId = await ctx.db.insert("collaborators", {
-      name,
-      office,
-      logo,
-    });
-
-    return collaboratorId;
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("collaborators", args);
   },
 });
 
@@ -43,7 +39,17 @@ export const deleteCollaborator = mutation({
     id: v.id("collaborators"),
   },
   handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id);
+    if (!existing) throw new Error("Collaborator not found");
+
+    if (existing.logo) {
+      await ctx.storage.delete(existing.logo).catch((error) => {
+        console.error("Failed to delete legacy logo:", error);
+      });
+    }
+
     await ctx.db.delete(args.id);
+    return { deletedPublicId: existing.imagePublicId ?? null };
   },
 });
 
@@ -52,33 +58,31 @@ export const updateCollaborator = mutation({
     id: v.id("collaborators"),
     name: v.string(),
     office: v.string(),
-    logo: v.optional(v.id("_storage")),
+    imageUrl: v.optional(v.string()),
+    imagePublicId: v.optional(v.string()),
   },
-  handler: async (ctx, { id, name, office, logo }) => {
+  handler: async (ctx, { id, name, office, imageUrl, imagePublicId }) => {
     const existing = await ctx.db.get(id);
     if (!existing) {
       throw new Error("Collaborator not found");
     }
 
-    // Only delete the old logo if we're updating to a new one
-    if (logo && logo !== existing.logo) {
-      try {
-        await ctx.storage.delete(existing.logo);
-      } catch (error) {
-        // If the old logo doesn't exist, just log it and continue
+    const replacing = !!imageUrl && imageUrl !== existing.imageUrl;
+
+    if (replacing && existing.logo) {
+      await ctx.storage.delete(existing.logo).catch((error) => {
         console.error("Failed to delete old logo:", error);
-      }
+      });
     }
 
-    // If no new logo is provided, keep the existing one
-    const updateData = {
+    await ctx.db.patch(id, {
       name,
       office,
-      ...(logo ? { logo } : {}),
+      ...(replacing ? { imageUrl, imagePublicId, logo: undefined } : {}),
+    });
+
+    return {
+      replacedPublicId: replacing ? (existing.imagePublicId ?? null) : null,
     };
-
-    await ctx.db.patch(id, updateData);
-
-    return id;
   },
 });

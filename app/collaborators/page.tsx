@@ -12,6 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { api } from "@/convex/_generated/api";
 import { Doc, Id } from "@/convex/_generated/dataModel";
+import {
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from "@/lib/cloudinary-upload";
 import { useMutation, useQuery } from "convex/react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
@@ -25,7 +29,8 @@ type Collaborator = Doc<"collaborators"> & {
 type CollaboratorFormData = {
   name: string;
   office: string;
-  logo?: Id<"_storage">;
+  imageUrl?: string;
+  imagePublicId?: string;
 };
 
 const CollaboratorDialog = ({
@@ -49,7 +54,6 @@ const CollaboratorDialog = ({
   });
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
 
   // Reset form when dialog opens/closes or initialData changes
   useEffect(() => {
@@ -71,17 +75,12 @@ const CollaboratorDialog = ({
       const preview = URL.createObjectURL(file);
       setPreviewUrl(preview);
 
-      const uploadUrl = await generateUploadUrl();
-      const response = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
+      const { imageUrl, imagePublicId } = await uploadToCloudinary(
+        file,
+        "collaborators"
+      );
 
-      if (!response.ok) throw new Error("Upload failed");
-      const { storageId } = await response.json();
-
-      setFormData((prev) => ({ ...prev, logo: storageId }));
+      setFormData((prev) => ({ ...prev, imageUrl, imagePublicId }));
     } catch (error) {
       toast.error("Upload failed", {
         description: error instanceof Error ? error.message : "Unknown error",
@@ -189,7 +188,7 @@ const Collaborators = () => {
     useState<Collaborator | null>(null);
 
   const handleCreate = async (data: CollaboratorFormData) => {
-    if (!data.logo) {
+    if (!data.imageUrl || !data.imagePublicId) {
       toast.error("Please upload a logo");
       return;
     }
@@ -198,7 +197,8 @@ const Collaborators = () => {
       await create({
         name: data.name,
         office: data.office,
-        logo: data.logo,
+        imageUrl: data.imageUrl,
+        imagePublicId: data.imagePublicId,
       });
       toast.success("Collaborator created successfully");
     } catch {
@@ -213,22 +213,18 @@ const Collaborators = () => {
     if (!id) return;
 
     try {
-      const updateData: {
-        id: Id<"collaborators">;
-        name: string;
-        office: string;
-        logo?: Id<"_storage">;
-      } = {
+      const { replacedPublicId } = await update({
         id,
         name: data.name,
         office: data.office,
-      };
+        ...(data.imageUrl && {
+          imageUrl: data.imageUrl,
+          imagePublicId: data.imagePublicId,
+        }),
+      });
 
-      if (data.logo) {
-        updateData.logo = data.logo;
-      }
-
-      await update(updateData);
+      // Drop the asset this record no longer points at.
+      await deleteFromCloudinary(replacedPublicId);
       toast.success("Collaborator updated successfully");
     } catch (error) {
       console.error("Update failed:", error);
@@ -238,7 +234,8 @@ const Collaborators = () => {
 
   const handleDelete = async (id: Id<"collaborators">) => {
     try {
-      await remove({ id });
+      const { deletedPublicId } = await remove({ id });
+      await deleteFromCloudinary(deletedPublicId);
       toast.success("Collaborator deleted successfully");
     } catch {
       toast.error("Failed to delete collaborator");
@@ -327,7 +324,8 @@ const Collaborators = () => {
                 data: {
                   name: selectedCollaborator.name,
                   office: selectedCollaborator.office,
-                  logo: selectedCollaborator.logo,
+                  imageUrl: selectedCollaborator.imageUrl,
+                  imagePublicId: selectedCollaborator.imagePublicId,
                 },
                 currentImageUrl: selectedCollaborator.imgUrl,
               }

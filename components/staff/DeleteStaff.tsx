@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { deleteFromCloudinary } from "@/lib/cloudinary-upload";
 import { useMutation } from "convex/react";
 import { TrashIcon } from "lucide-react";
 import { useState } from "react";
@@ -29,7 +30,8 @@ export default function DeleteStaff({ id, name }: Props) {
   const handleDelete = async () => {
     setLoading(true);
     try {
-      await deleteStaff({ id });
+      const { deletedPublicId } = await deleteStaff({ id });
+      await deleteFromCloudinary(deletedPublicId);
       toast.success("Staff member deleted");
       setOpen(false);
     } catch (err) {

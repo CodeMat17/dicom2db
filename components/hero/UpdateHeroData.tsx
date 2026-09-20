@@ -10,6 +10,10 @@ import {
 } from "@/components/ui/dialog";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import {
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from "@/lib/cloudinary-upload";
 import clsx from "clsx";
 import { useMutation } from "convex/react";
 import Image from "next/image";
@@ -27,7 +31,6 @@ type Props = {
 };
 
 const UpdateHeroData = ({ id, heroImgUrl, heroTitle, heroSubtitle }: Props) => {
-  const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
   const updateHeroSlide = useMutation(api.heroSlides.updateHeroSlide);
 
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -64,34 +67,22 @@ const UpdateHeroData = ({ id, heroImgUrl, heroTitle, heroSubtitle }: Props) => {
 
     setIsUpdating(true);
     try {
-      let newStorageId: Id<"_storage"> | undefined;
+      const uploaded = selectedImage
+        ? await uploadToCloudinary(selectedImage, "hero")
+        : null;
 
-      if (selectedImage) {
-         const uploadUrl = await generateUploadUrl();
-      const uploadRes = await fetch(uploadUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": selectedImage.type,
-        },
-        body: selectedImage,
-      });
-        
-      if (!uploadRes.ok) throw new Error("Image upload failed");
- 
-      const { storageId } = await uploadRes.json();
-      newStorageId = storageId;
-
-      }
-     
-
-
-
-      await updateHeroSlide({
+      const { replacedPublicId } = await updateHeroSlide({
         id,
         title: title.trim(),
         subtitle: subtitle.trim(),
-        ...(newStorageId && { img: newStorageId }),
+        ...(uploaded && {
+          imageUrl: uploaded.imageUrl,
+          imagePublicId: uploaded.imagePublicId,
+        }),
       });
+
+      // The record no longer points at the old asset, so drop it.
+      await deleteFromCloudinary(replacedPublicId);
 
       toast.success("Done!", { description: "Hero updated successfully." });
       setIsDialogOpen(false);

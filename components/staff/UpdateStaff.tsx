@@ -12,6 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import {
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from "@/lib/cloudinary-upload";
 import { useMutation } from "convex/react";
 import { PenIcon } from "lucide-react";
 import Image from "next/image";
@@ -57,52 +61,39 @@ export default function UpdateStaff({
     }
   }, [image]);
 
-  const uploadImage = async (file: File): Promise<Id<"_storage">> => {
-    const res = await fetch("/api/storage/upload-url", { method: "POST" });
-    const { uploadUrl } = await res.json();
-
-    const uploadRes = await fetch(uploadUrl, {
-      method: "POST",
-      body: file,
-    });
-
-    const { storageId } = await uploadRes.json();
-    return storageId;
-  };
-
   const handleUpdate = async () => {
     if (!name || !position || !profile) {
       toast.error("All fields  are required");
       return;
     }
 
-    if (image && image.size > 512000) {
-      toast.error("Image must be smaller than 500KB");
-      return;
-    }
-
     setLoading(true);
     try {
-      let imageId: Id<"_storage"> | undefined;
+      const uploaded = image
+        ? await uploadToCloudinary(image, "staff")
+        : null;
 
-      if (image) {
-        imageId = await uploadImage(image);
-      }
-
-      await updateStaff({
+      const { replacedPublicId } = await updateStaff({
         id,
         name,
         position,
         profile,
         email,
-        ...(imageId && { image: imageId }),
+        ...(uploaded && {
+          imageUrl: uploaded.imageUrl,
+          imagePublicId: uploaded.imagePublicId,
+        }),
       });
+
+      await deleteFromCloudinary(replacedPublicId);
 
       toast.success("Staff member updated");
       setOpen(false);
     } catch (err) {
       console.error("Update Error:", err);
-      toast.error("Failed to update staff member");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update staff member"
+      );
     } finally {
       setLoading(false);
     }

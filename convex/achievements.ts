@@ -1,34 +1,36 @@
 // convex/achievements.ts
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-// import { paginationOptsValidator } from "convex/server";
+import { Doc } from "./_generated/dataModel";
+import { QueryCtx } from "./_generated/server";
+
+/**
+ * Cover photos live in Cloudinary. Rows written before the move still point
+ * at a Convex file, so every read resolves Cloudinary first and falls back to
+ * storage until `scripts/migrate-to-cloudinary` has copied them over.
+ */
+const resolvePhotoUrl = async (ctx: QueryCtx, achievement: Doc<"achievements">) =>
+  achievement.imageUrl ??
+  (achievement.photo ? await ctx.storage.getUrl(achievement.photo) : null);
 
 export const getLatestAchievements = query({
   handler: async (ctx) => {
     const achievements = await ctx.db
       .query("achievements")
       .order("desc")
-      .take(3); // Limit to the latest 2 entries
+      .take(3);
 
-    const achievementsWithPhotos = await Promise.all(
-      achievements.map(async (achievement) => {
-        const photoUrl = !!achievement.photo
-          ? await ctx.storage.getUrl(achievement.photo)
-          : null;
-
-        return {
-          _id: achievement._id,
-          title: achievement.title,
-          description: achievement.description,
-          slug: achievement.slug,
-          date: achievement._creationTime,
-          publishedAt: achievement.publishedAt,
-          photoUrl,
-        };
-      })
+    return await Promise.all(
+      achievements.map(async (achievement) => ({
+        _id: achievement._id,
+        title: achievement.title,
+        description: achievement.description,
+        slug: achievement.slug,
+        date: achievement._creationTime,
+        publishedAt: achievement.publishedAt,
+        photoUrl: await resolvePhotoUrl(ctx, achievement),
+      }))
     );
-
-    return achievementsWithPhotos;
   },
 });
 
@@ -39,28 +41,18 @@ export const getAllAchievements = query({
       .order("desc")
       .collect();
 
-    const achievementsWithPhotos = await Promise.all(
-      achievements.map(async (achievement) => {
-        const photoUrl = achievement.photo
-          ? await ctx.storage.getUrl(achievement.photo)
-          : null;
-
-        // Omit the story field
-        // Destructure with ignored variable pattern
-        return {
-          _id: achievement._id,
-          date: achievement._creationTime,
-          title: achievement.title,
-          description: achievement.description,
-          slug: achievement.slug,
-          photoUrl,
-          publishedAt: achievement.publishedAt,
-          _creationTime: achievement._creationTime,
-        };
-      })
+    return await Promise.all(
+      achievements.map(async (achievement) => ({
+        _id: achievement._id,
+        date: achievement._creationTime,
+        title: achievement.title,
+        description: achievement.description,
+        slug: achievement.slug,
+        photoUrl: await resolvePhotoUrl(ctx, achievement),
+        publishedAt: achievement.publishedAt,
+        _creationTime: achievement._creationTime,
+      }))
     );
-
-    return achievementsWithPhotos;
   },
 });
 
@@ -77,39 +69,10 @@ export const getAchievementBySlug = query({
       return null;
     }
 
-    try {
-      const photoUrl = await ctx.storage.getUrl(achievement.photo);
-      return {
-        ...achievement,
-        photoUrl: photoUrl || null,
-      };
-    } catch (error) {
-      console.error("Error fetching image URL:", error);
-      return {
-        ...achievement,
-        photoUrl: null,
-      };
-    }
-  },
-});
-
-// convex/achievements.ts
-export const createAchievement = mutation({
-  args: {
-    title: v.string(),
-    description: v.string(),
-    slug: v.string(),
-    story: v.optional(v.string()),
-    photoStorageId: v.id("_storage"),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.insert("achievements", {
-      title: args.title,
-      description: args.description,
-      slug: args.slug,
-      story: args.story,
-      photo: args.photoStorageId,
-    });
+    return {
+      ...achievement,
+      photoUrl: await resolvePhotoUrl(ctx, achievement),
+    };
   },
 });
 
@@ -119,16 +82,15 @@ export const addStory = mutation({
     description: v.string(),
     slug: v.string(),
     story: v.optional(v.string()),
-    photo: v.id("_storage"),
+    imageUrl: v.string(),
+    imagePublicId: v.string(),
     publishedAt: v.number(),
   },
   handler: async (ctx, args) => {
-    // Validate required fields
-    if (!args.title.trim() || !args.slug.trim() || !args.photo) {
+    if (!args.title.trim() || !args.slug.trim() || !args.imageUrl) {
       throw new Error("Title, slug, and photo are required");
     }
 
-    // Check for existing story with the same slug
     const existing = await ctx.db
       .query("achievements")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
@@ -138,17 +100,15 @@ export const addStory = mutation({
       throw new Error(`Slug "${args.slug}" already exists`);
     }
 
-    // Create the new achievement
-    const achievementId = await ctx.db.insert("achievements", {
+    return await ctx.db.insert("achievements", {
       title: args.title,
       description: args.description,
       slug: args.slug,
       story: args.story?.trim() || undefined,
-      photo: args.photo,
+      imageUrl: args.imageUrl,
+      imagePublicId: args.imagePublicId,
       publishedAt: args.publishedAt,
     });
-
-    return achievementId;
   },
 });
 
@@ -157,25 +117,25 @@ export const deleteAchievement = mutation({
     id: v.id("achievements"),
   },
   handler: async (ctx, args) => {
-    // Get the achievement first to access the storage ID
     const achievement = await ctx.db.get(args.id);
 
     if (!achievement) {
       throw new Error("Achievement not found");
     }
 
-    // Delete associated storage file if exists
     if (achievement.photo) {
-      await ctx.storage.delete(achievement.photo);
+      await ctx.storage.delete(achievement.photo).catch((error) => {
+        console.error("Failed to delete legacy photo:", error);
+      });
     }
 
-    // Delete the database record
     await ctx.db.delete(args.id);
 
     return {
       success: true,
       deletedId: args.id,
-      deletedPhoto: achievement.photo || null,
+      // The dashboard purges the Cloudinary asset; only it holds the secret.
+      deletedPublicId: achievement.imagePublicId ?? null,
     };
   },
 });
@@ -187,7 +147,8 @@ export const updateAchievement = mutation({
     slug: v.string(),
     description: v.string(),
     story: v.optional(v.string()),
-    photo: v.id("_storage"),
+    imageUrl: v.optional(v.string()),
+    imagePublicId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.id);
@@ -195,25 +156,33 @@ export const updateAchievement = mutation({
       throw new Error("Achievement not found");
     }
 
-    // Clean up previous photo if changed
-    if (existing.photo !== args.photo) {
+    const replacing = !!args.imageUrl && args.imageUrl !== existing.imageUrl;
+
+    if (replacing && existing.photo) {
       await ctx.storage.delete(existing.photo).catch((error) => {
-        console.error("Failed to delete old photo:", error);
+        console.error("Failed to delete legacy photo:", error);
       });
     }
 
-    // Perform the update
-    return ctx.db.patch(args.id, {
+    await ctx.db.patch(args.id, {
       title: args.title.trim(),
       slug: args.slug.toLowerCase().trim(),
       description: args.description.trim(),
       story: args.story?.trim(),
-      photo: args.photo,
+      ...(replacing
+        ? {
+            imageUrl: args.imageUrl,
+            imagePublicId: args.imagePublicId,
+            photo: undefined,
+          }
+        : {}),
     });
+
+    return {
+      replacedPublicId: replacing ? (existing.imagePublicId ?? null) : null,
+    };
   },
 });
-
-
 
 export const getAllAchievementsWithPhotos = query({
   handler: async (ctx) => {
@@ -222,23 +191,15 @@ export const getAllAchievementsWithPhotos = query({
       .order("desc")
       .collect();
 
-    const achievementsWithPhotos = await Promise.all(
-      achievements.map(async (achievement) => {
-        const photoUrl = achievement.photo
-          ? await ctx.storage.getUrl(achievement.photo)
-          : null;
-
-        return {
-          _id: achievement._id,
-          title: achievement.title,
-          description: achievement.description,
-          slug: achievement.slug,
-          date: achievement.publishedAt,
-          photoUrl,
-        };
-      })
+    return await Promise.all(
+      achievements.map(async (achievement) => ({
+        _id: achievement._id,
+        title: achievement.title,
+        description: achievement.description,
+        slug: achievement.slug,
+        date: achievement.publishedAt,
+        photoUrl: await resolvePhotoUrl(ctx, achievement),
+      }))
     );
-
-    return achievementsWithPhotos;
   },
 });

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { deleteFromCloudinary } from "@/lib/cloudinary-upload";
+import { deleteManyFromCloudinary } from "@/lib/cloudinary-upload";
 import { useMutation } from "convex/react";
 import Image from "next/image";
 import { useState } from "react";
@@ -21,9 +21,11 @@ type Props = {
   id: Id<"gallery">;
   title: string;
   photoUrl: string | null;
+  /** Shown next to the cover so the count being removed is obvious. */
+  imageCount: number;
 };
 
-const DeleteGalleryPhoto = ({ id, title, photoUrl }: Props) => {
+const DeleteGalleryPhoto = ({ id, title, photoUrl, imageCount }: Props) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [open, setOpen] = useState(false);
   const deletePhoto = useMutation(api.gallery.deletePhoto);
@@ -31,9 +33,9 @@ const DeleteGalleryPhoto = ({ id, title, photoUrl }: Props) => {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const { deletedPublicId } = await deletePhoto({ id });
-      await deleteFromCloudinary(deletedPublicId);
-      toast.success("Success!", { description: "Photo deleted." });
+      const { deletedPublicIds } = await deletePhoto({ id });
+      await deleteManyFromCloudinary(deletedPublicIds);
+      toast.success("Success!", { description: "Post deleted." });
       setOpen(false);
     } catch (error) {
       toast.error("Failed!", { description: "Could not delete the photo." });
@@ -69,7 +71,8 @@ const DeleteGalleryPhoto = ({ id, title, photoUrl }: Props) => {
           </div>
         )}
         <p className='text-sm text-muted-foreground'>
-          This removes the record and its image file. It cannot be undone.
+          This removes the post and its {imageCount} photo
+          {imageCount === 1 ? "" : "s"}. It cannot be undone.
         </p>
         <DialogFooter>
           <Button

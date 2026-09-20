@@ -26,11 +26,12 @@ export default function GalleryDashboard() {
         <div>
           <h1 className='text-3xl font-bold'>Manage Gallery</h1>
           <p className='text-sm text-muted-foreground mt-1'>
-            Photos publish to the site in their own orientation, newest first.
+            Each post can hold several photos. They publish to the site in
+            their own orientation, newest first.
           </p>
         </div>
         <Button asChild>
-          <Link href='/gallery/add-photo'>Add Photo</Link>
+          <Link href='/gallery/add-photo'>Add Post</Link>
         </Button>
       </div>
 
@@ -44,18 +45,43 @@ export default function GalleryDashboard() {
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
           {photos.map((photo) => (
             <Card key={photo._id} className='overflow-hidden flex flex-col'>
-              {photo.photoUrl ? (
-                <div className='relative w-full bg-muted'>
+              {photo.images.length > 0 ? (
+                <div className='bg-muted'>
                   {/* Contained, not cropped, so the listing shows the real
-                      shape of the file that was uploaded. */}
-                  <Image
-                    src={photo.photoUrl}
-                    alt={photo.title}
-                    width={photo.width ?? 800}
-                    height={photo.height ?? 600}
-                    className='w-full h-56 object-contain'
-                    unoptimized
-                  />
+                      shape of the files that were uploaded. */}
+                  <div className='relative w-full'>
+                    <Image
+                      src={photo.images[0].url}
+                      alt={`${photo.title} — photo 1`}
+                      width={photo.images[0].width ?? 800}
+                      height={photo.images[0].height ?? 600}
+                      className='w-full h-56 object-contain'
+                      unoptimized
+                    />
+                    {photo.images.length > 1 && (
+                      <span className='absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-0.5 text-xs text-white'>
+                        {photo.images.length} photos
+                      </span>
+                    )}
+                  </div>
+
+                  {/* The rest of the set, so a post's photos are all visible
+                      from the listing without opening the edit dialog. */}
+                  {photo.images.length > 1 && (
+                    <div className='flex gap-2 overflow-x-auto border-t p-2'>
+                      {photo.images.slice(1).map((image, index) => (
+                        <Image
+                          key={image.url}
+                          src={image.url}
+                          alt={`${photo.title} — photo ${index + 2}`}
+                          width={image.width ?? 200}
+                          height={image.height ?? 200}
+                          className='h-16 w-16 shrink-0 rounded border bg-background object-contain'
+                          unoptimized
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className='text-center italic animate-pulse py-6'>
@@ -82,7 +108,12 @@ export default function GalleryDashboard() {
                       Published{" "}
                       {dayjs(photo.publishedAt).format("MMM DD, YYYY")}
                     </span>
-                    <span>{orientationOf(photo.width, photo.height)}</span>
+                    <span>
+                      {orientationOf(
+                        photo.images[0]?.width,
+                        photo.images[0]?.height
+                      )}
+                    </span>
                     {photo.category && <span>{photo.category}</span>}
                   </div>
                 </div>
@@ -92,14 +123,15 @@ export default function GalleryDashboard() {
                 <DeleteGalleryPhoto
                   id={photo._id}
                   title={photo.title}
-                  photoUrl={photo.photoUrl}
+                  photoUrl={photo.images[0]?.url ?? null}
+                  imageCount={photo.images.length}
                 />
                 <UpdateGalleryPhoto
                   id={photo._id}
                   title={photo.title}
                   description={photo.description}
                   category={photo.category}
-                  photoUrl={photo.photoUrl}
+                  images={photo.images}
                 />
               </CardFooter>
             </Card>

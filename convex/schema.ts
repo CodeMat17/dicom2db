@@ -73,11 +73,25 @@ export default defineSchema({
   gallery: defineTable({
     title: v.string(),
     description: v.string(),
+    // A post carries a set of photos. `images` is the source of truth; the
+    // single-image fields below are the pre-multi-image shape, still read as
+    // a one-photo fallback for rows written before this change.
+    // Cloudinary reports width/height on upload, so the public grid can
+    // reserve the right box and lay portraits and landscapes out without
+    // measuring first.
+    images: v.optional(
+      v.array(
+        v.object({
+          url: v.string(),
+          publicId: v.string(),
+          width: v.optional(v.number()),
+          height: v.optional(v.number()),
+        })
+      )
+    ),
     photo: v.optional(v.id("_storage")),
     imageUrl: v.optional(v.string()),
     imagePublicId: v.optional(v.string()),
-    // Cloudinary reports these on upload, so the public grid can reserve the
-    // right box and lay portraits and landscapes out without measuring first.
     width: v.optional(v.number()),
     height: v.optional(v.number()),
     category: v.optional(v.string()),

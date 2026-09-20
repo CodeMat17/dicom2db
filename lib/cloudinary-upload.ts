@@ -84,3 +84,14 @@ export async function deleteFromCloudinary(publicId?: string | null) {
     console.error("Failed to delete Cloudinary asset:", error);
   }
 }
+
+/**
+ * Same best-effort removal for a whole set, used when a gallery post is
+ * deleted or has photos taken out of it.
+ */
+export async function deleteManyFromCloudinary(
+  publicIds?: (string | null | undefined)[] | null
+) {
+  if (!publicIds?.length) return;
+  await Promise.all(publicIds.map((publicId) => deleteFromCloudinary(publicId)));
+}

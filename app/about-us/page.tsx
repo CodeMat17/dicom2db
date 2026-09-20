@@ -23,7 +23,7 @@ export default function AboutUs() {
           transition={{ duration: 0.6 }}
           className='relative z-10 text-center'>
           <h1 className='text-4xl md:text-5xl font-bold mb-6 text-[#213675] dark:text-blue-500'>
-           Manage About Dicom
+           Manage About Dicom.
           </h1>
          
           

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 import { api } from "@/convex/_generated/api";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { useMutation } from "convex/react";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
@@ -51,6 +52,7 @@ export default function AddCarousel() {
         imagePublicId,
       });
 
+      revalidateSite("hero-slides");
       toast.success("Carousel slide added successfully");
       router.back();
     } catch (err) {

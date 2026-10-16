@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -55,6 +56,7 @@ export default function AddStaff() {
         imagePublicId,
       });
 
+      revalidateSite("team");
       toast.success("Staff member added");
       setName("");
       setPosition("");

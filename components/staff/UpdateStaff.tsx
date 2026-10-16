@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { Id } from "@/convex/_generated/dataModel";
 import {
   deleteFromCloudinary,
@@ -87,6 +88,7 @@ export default function UpdateStaff({
 
       await deleteFromCloudinary(replacedPublicId);
 
+      revalidateSite("team");
       toast.success("Staff member updated");
       setOpen(false);
     } catch (err) {

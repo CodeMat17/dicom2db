@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
+import { revalidateSite } from "@/lib/revalidate-site";
 import {
   deleteFromCloudinary,
   uploadToCloudinary,
@@ -120,6 +121,7 @@ export default function AchievementPage() {
       // The story no longer points at the previous cover image.
       await deleteFromCloudinary(replacedPublicId);
 
+      revalidateSite("achievements");
       toast.success("Achievement updated successfully");
       setIsEditing(false);
       // Redirect to new slug if it changed

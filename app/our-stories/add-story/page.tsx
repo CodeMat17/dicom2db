@@ -4,6 +4,7 @@ import { RichTextEditor } from "@/components/RichTextEditor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
+import { revalidateSite } from "@/lib/revalidate-site";
 import {
   uploadToCloudinary,
   type UploadedImage,
@@ -89,6 +90,7 @@ const AddStory = () => {
         publishedAt: Date.now(),
       });
 
+      revalidateSite("achievements");
       toast.success("Success!", { description: "Story created successfully" });
       resetForm();
       router.back();

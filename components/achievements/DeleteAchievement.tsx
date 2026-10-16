@@ -10,6 +10,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { api } from "@/convex/_generated/api";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { Id } from "@/convex/_generated/dataModel";
 import { deleteFromCloudinary } from "@/lib/cloudinary-upload";
 import { useMutation } from "convex/react";
@@ -38,6 +39,7 @@ const DeleteAchievement = ({ id, title }: Props) => {
       const { deletedPublicId } = await deleteAchievement({ id });
       await deleteFromCloudinary(deletedPublicId);
 
+      revalidateSite("achievements");
       toast.success("Done!", {
         description: "Achievement deleted successfully",
       });

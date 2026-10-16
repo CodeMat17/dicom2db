@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { Id } from "@/convex/_generated/dataModel";
 import {
   deleteManyFromCloudinary,
@@ -140,6 +141,7 @@ const UpdateGalleryPhoto = ({
       });
 
       await deleteManyFromCloudinary(replacedPublicIds);
+      revalidateSite("gallery");
       toast.success("Success!", { description: "Post updated" });
       setOpen(false);
     } catch (error) {

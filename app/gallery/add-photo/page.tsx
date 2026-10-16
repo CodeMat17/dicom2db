@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
+import { revalidateSite } from "@/lib/revalidate-site";
 import {
   deleteManyFromCloudinary,
   uploadToCloudinary,
@@ -101,6 +102,7 @@ const AddPhoto = () => {
         publishedAt: Date.now(),
       });
 
+      revalidateSite("gallery");
       toast.success("Success!", { description: "Photos published" });
       router.push("/gallery");
     } catch (error) {

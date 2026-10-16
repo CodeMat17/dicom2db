@@ -9,6 +9,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { api } from "@/convex/_generated/api";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { Id } from "@/convex/_generated/dataModel";
 import { deleteFromCloudinary } from "@/lib/cloudinary-upload";
 import { useMutation } from "convex/react";
@@ -32,6 +33,7 @@ const DeleteHeroData = ({ id, imgUrl }: Props) => {
       const { deletedPublicId } = await deleteHeroSlide({ id });
       // Keep the Cloudinary library in step with the database.
       await deleteFromCloudinary(deletedPublicId);
+      revalidateSite("hero-slides");
       toast.success("Success!", { description: "Deleted successfully." });
     } catch (error) {
       toast.error("Failed!", { description: "Failed to delete hero slide." });

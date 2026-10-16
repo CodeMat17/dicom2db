@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { Doc, Id } from "@/convex/_generated/dataModel";
 import { useMutation, useQuery } from "convex/react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
@@ -126,6 +127,7 @@ const UpcomingEvents = () => {
   const handleCreate = async (data: EventFormData) => {
     try {
       await create(data);
+      revalidateSite("events");
       toast.success("Event created successfully");
     } catch (error) {
       console.error("Create failed:", error);
@@ -141,6 +143,7 @@ const UpcomingEvents = () => {
         id,
         ...data,
       });
+      revalidateSite("events");
       toast.success("Event updated successfully");
     } catch (error) {
       console.error("Update failed:", error);
@@ -151,6 +154,7 @@ const UpcomingEvents = () => {
   const handleDelete = async (id: Id<"events">) => {
     try {
       await remove({ id });
+      revalidateSite("events");
       toast.success("Event deleted successfully");
     } catch (error) {
       console.error("Delete failed:", error);

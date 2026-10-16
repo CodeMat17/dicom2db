@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -47,6 +48,7 @@ export default function EditAchievements() {
     setLoadingField(field);
     try {
       await update({ id: stats._id, [field]: form[field] });
+      revalidateSite("achievements-stats");
       toast.success(`${field.replace(/([A-Z])/g, " $1")} updated`);
     } catch (err) {
       toast.error("Update failed", { description: String(err) });

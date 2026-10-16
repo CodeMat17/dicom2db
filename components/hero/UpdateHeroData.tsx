@@ -9,6 +9,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { api } from "@/convex/_generated/api";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { Id } from "@/convex/_generated/dataModel";
 import {
   deleteFromCloudinary,
@@ -84,6 +85,7 @@ const UpdateHeroData = ({ id, heroImgUrl, heroTitle, heroSubtitle }: Props) => {
       // The record no longer points at the old asset, so drop it.
       await deleteFromCloudinary(replacedPublicId);
 
+      revalidateSite("hero-slides");
       toast.success("Done!", { description: "Hero updated successfully." });
       setIsDialogOpen(false);
     } catch (error) {

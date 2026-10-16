@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { api } from "@/convex/_generated/api";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   deleteFromCloudinary,
@@ -200,6 +201,7 @@ const Collaborators = () => {
         imageUrl: data.imageUrl,
         imagePublicId: data.imagePublicId,
       });
+      revalidateSite("collaborators");
       toast.success("Collaborator created successfully");
     } catch {
       toast.error("Failed to create collaborator");
@@ -225,6 +227,7 @@ const Collaborators = () => {
 
       // Drop the asset this record no longer points at.
       await deleteFromCloudinary(replacedPublicId);
+      revalidateSite("collaborators");
       toast.success("Collaborator updated successfully");
     } catch (error) {
       console.error("Update failed:", error);
@@ -236,6 +239,7 @@ const Collaborators = () => {
     try {
       const { deletedPublicId } = await remove({ id });
       await deleteFromCloudinary(deletedPublicId);
+      revalidateSite("collaborators");
       toast.success("Collaborator deleted successfully");
     } catch {
       toast.error("Failed to delete collaborator");

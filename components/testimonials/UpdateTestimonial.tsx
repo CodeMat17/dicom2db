@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { Id } from "@/convex/_generated/dataModel";
 import { useMutation } from "convex/react";
 import { PenBox } from "lucide-react";
@@ -50,6 +51,7 @@ export function UpdateTestimonialDialog({ id, t_name, t_role, t_body }: Props) {
     setLoading(true);
     try {
       await updateTestimonial({ id, name, role, body });
+      revalidateSite("testimonials");
       toast.success("Testimonial updated");
       setOpen(false);
     } catch (err) {

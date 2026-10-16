@@ -9,6 +9,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { api } from "@/convex/_generated/api";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { Id } from "@/convex/_generated/dataModel";
 import { deleteManyFromCloudinary } from "@/lib/cloudinary-upload";
 import { useMutation } from "convex/react";
@@ -35,6 +36,7 @@ const DeleteGalleryPhoto = ({ id, title, photoUrl, imageCount }: Props) => {
     try {
       const { deletedPublicIds } = await deletePhoto({ id });
       await deleteManyFromCloudinary(deletedPublicIds);
+      revalidateSite("gallery");
       toast.success("Success!", { description: "Post deleted." });
       setOpen(false);
     } catch (error) {

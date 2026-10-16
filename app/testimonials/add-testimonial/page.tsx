@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -40,6 +41,7 @@ export default function AddTestimonialPage() {
     setLoading(true);
     try {
       await addTestimonial({ name, role, body });
+      revalidateSite("testimonials");
       toast.success("Testimonial added successfully!");
       setName("");
       setRole("");

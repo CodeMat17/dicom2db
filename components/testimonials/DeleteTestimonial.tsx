@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -33,6 +34,7 @@ const DeleteTestimonial = ({id, name}: {id: Id<'testimonials'>, name: string}) =
         setIsDeleting(true)
       try {
         await deleteTestimonial({ id });
+        revalidateSite("testimonials");
           toast.success("Testimonial deleted.");
           setOpen(false)
       } catch (err) {

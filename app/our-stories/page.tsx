@@ -76,6 +76,7 @@ const AchievementsPage = () => {
                 <div className='flex gap-4 justify-between'>
                   <DeleteAchievement
                     id={achievement._id}
+                    slug={achievement.slug}
                     title={achievement.title}
                   />
                   <Button asChild variant='outline' className='w-full'>

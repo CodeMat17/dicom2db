@@ -1,12 +1,11 @@
-// File: /app/api/revalidate/route.ts
 import { SITE_TAGS, type SiteTag } from "@/lib/revalidate-site";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
  * Forwards a refresh request to the public site's /api/revalidate, so the
- * shared secret never leaves the server. Only one known tag is passed on at a
- * time; the public site treats a missing tag as "rebuild everything", which
- * is never what a single edit needs.
+ * shared secret never leaves the server. Only one known tag is passed on per
+ * save, plus one `achievement:<slug>` tag for each story page the save
+ * touched.
  */
 export async function POST(request: NextRequest) {
   const siteUrl = process.env.PUBLIC_SITE_URL;
@@ -18,14 +17,24 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { tag } = (await request.json().catch(() => ({}))) as { tag?: string };
+  const { tag, storySlugs } = (await request.json().catch(() => ({}))) as {
+    tag?: string;
+    storySlugs?: unknown;
+  };
   if (!tag || !SITE_TAGS.includes(tag as SiteTag)) {
     return NextResponse.json({ error: "Unknown tag" }, { status: 400 });
   }
 
+  const slugs = Array.isArray(storySlugs)
+    ? storySlugs.filter((slug): slug is string => typeof slug === "string" && !!slug)
+    : [];
+
   try {
     const url = new URL("/api/revalidate", siteUrl);
-    url.searchParams.set("tag", tag);
+    url.searchParams.append("tag", tag);
+    for (const slug of new Set(slugs)) {
+      url.searchParams.append("tag", `achievement:${slug}`);
+    }
 
     const res = await fetch(url, {
       method: "POST",

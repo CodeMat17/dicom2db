@@ -21,10 +21,11 @@ import { Button } from "../ui/button";
 
 type Props = {
   id: Id<"achievements">;
+  slug: string;
   title: string;
 };
 
-const DeleteAchievement = ({ id, title }: Props) => {
+const DeleteAchievement = ({ id, slug, title }: Props) => {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -39,7 +40,7 @@ const DeleteAchievement = ({ id, title }: Props) => {
       const { deletedPublicId } = await deleteAchievement({ id });
       await deleteFromCloudinary(deletedPublicId);
 
-      revalidateSite("achievements");
+      revalidateSite("achievements", slug);
       toast.success("Done!", {
         description: "Achievement deleted successfully",
       });

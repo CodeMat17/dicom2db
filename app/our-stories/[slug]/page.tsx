@@ -121,7 +121,13 @@ export default function AchievementPage() {
       // The story no longer points at the previous cover image.
       await deleteFromCloudinary(replacedPublicId);
 
-      revalidateSite("achievements");
+      // The mutation stores the slug lowercased and trimmed; a rename also
+      // refreshes the old URL so it stops serving the story.
+      revalidateSite(
+        "achievements",
+        storyData!.slug,
+        slug.toLowerCase().trim()
+      );
       toast.success("Achievement updated successfully");
       setIsEditing(false);
       // Redirect to new slug if it changed

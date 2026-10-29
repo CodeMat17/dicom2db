@@ -90,7 +90,7 @@ const AddStory = () => {
         publishedAt: Date.now(),
       });
 
-      revalidateSite("achievements");
+      revalidateSite("achievements", slug);
       toast.success("Success!", { description: "Story created successfully" });
       resetForm();
       router.back();
